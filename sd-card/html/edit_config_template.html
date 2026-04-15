@@ -294,6 +294,32 @@
             <td>$TOOLTIP_TakeImage_RawImagesRetention</td>
         </tr>
 
+        <tr>
+            <td class="indent1">
+                <input type="checkbox" id="TakeImage_RawImesCircularBuffer_enabled" value="1" onclick='InvertEnableItem("TakeImage", "RawImesCircularBuffer")' unchecked >
+                <label for=TakeImage_RawImesCircularBuffer_enabled><class id="TakeImage_RawImesCircularBuffer_text" style="color:black;">Raw Images Circular Buffer</class></label>
+            </td>
+            <td>
+                <select id="TakeImage_RawImesCircularBuffer_value1">
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                </select>
+            </td>
+            <td>Enable circular buffer for raw images. When active, images are stored in numbered day-slots and old slots are overwritten.</td>
+        </tr>
+
+        <tr>
+            <td class="indent1">
+                <input type="checkbox" id="TakeImage_RawImesCircularBufferDays_enabled" value="1" onclick='InvertEnableItem("TakeImage", "RawImesCircularBufferDays")' unchecked >
+                <label for=TakeImage_RawImesCircularBufferDays_enabled><class id="TakeImage_RawImesCircularBufferDays_text" style="color:black;">Circular Buffer Days</class></label>
+            </td>
+            <td>
+                <input required type="number" id="TakeImage_RawImesCircularBufferDays_value1" size="13" min="1" max="30" step="1"
+                    oninput="(!validity.rangeUnderflow||(value=1)) && (!validity.rangeOverflow||(value=30)) && (!validity.stepMismatch||(value=parseInt(this.value)));">Days (max 30)
+            </td>
+            <td>Number of day-slots kept in the circular buffer (1–30, default 30).</td>
+        </tr>
+
         <tr class="expert" unused_id="TakeImage_WaitBeforeTakingPicture_ex3">
             <td class="indent1">
                 <class id="TakeImage_WaitBeforeTakingPicture_text" style="color:black;">Wait Before Taking Picture</class>
@@ -2308,6 +2334,8 @@ function UpdateInput() {
 
     WriteParameter(param, category, "TakeImage", "RawImagesLocation", true);
     WriteParameter(param, category, "TakeImage", "RawImagesRetention", true);
+    WriteParameter(param, category, "TakeImage", "RawImesCircularBuffer", true);
+    WriteParameter(param, category, "TakeImage", "RawImesCircularBufferDays", true);
 
     WriteParameter(param, category, "TakeImage", "WaitBeforeTakingPicture", false);
     WriteParameter(param, category, "TakeImage", "CamGainceiling", false);	
@@ -2476,6 +2504,8 @@ function ReadParameterAll() {
 
     ReadParameter(param, "TakeImage", "RawImagesLocation", true);
     ReadParameter(param, "TakeImage", "RawImagesRetention", true);
+    ReadParameter(param, "TakeImage", "RawImesCircularBuffer", true);
+    ReadParameter(param, "TakeImage", "RawImesCircularBufferDays", true);
     ReadParameter(param, "TakeImage", "WaitBeforeTakingPicture", false);
     ReadParameter(param, "TakeImage", "CamGainceiling", false);	
     ReadParameter(param, "TakeImage", "CamQuality", false);	

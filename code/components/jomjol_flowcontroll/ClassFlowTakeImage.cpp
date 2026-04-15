@@ -102,6 +102,27 @@ bool ClassFlowTakeImage::ReadParameter(FILE *pfile, string &aktparamgraph)
             }          
         }
 
+        else if ((toUpper(splitted[0]) == "RAWIMESCIRCULARBUFFER") && (splitted.size() > 1))
+        {
+            circularBufferEnabled = alphanumericToBoolean(splitted[1]);
+            if (circularBufferEnabled && !isLogImage) {
+                /* Circular buffer requires image logging – enable with default location */
+                imagesLocation = "/sdcard/log/source";
+                isLogImage = true;
+            }
+        }
+
+        else if ((toUpper(splitted[0]) == "RAWIMESCIRCULARBUFFERDAYS") && (splitted.size() > 1))
+        {
+            if (isStringNumeric(splitted[1]))
+            {
+                int days = std::stoi(splitted[1]);
+                if (days < 1)  days = 1;
+                if (days > 30) days = 30;
+                circularBufferDays = (unsigned short)days;
+            }
+        }
+
         else if ((toUpper(splitted[0]) == "SAVEALLFILES") && (splitted.size() > 1))
         {
             CCstatus.SaveAllFiles = alphanumericToBoolean(splitted[1]);

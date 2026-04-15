@@ -1,6 +1,7 @@
 #include "ClassFlowImage.h"
 #include <string>
 #include <string.h>
+#include <stdio.h>
 #include <sys/stat.h>
 
 #ifdef __cplusplus
@@ -19,6 +20,45 @@ extern "C" {
 
 static const char* TAG = "FLOWIMAGE";
 
+/* Path of the small state file that persists the circular-buffer slot on the SD card */
+static const char* CBUF_STATE_FILE = "/sdcard/img_tmp/cbuf_state.ini";
+
+/* ------------------------------------------------------------------ */
+/* Circular-buffer state helpers                                        */
+/* ------------------------------------------------------------------ */
+
+static bool cbuf_read_state(int &slot, std::string &lastDate)
+{
+    FILE *f = fopen(CBUF_STATE_FILE, "r");
+    if (!f) {
+        return false;
+    }
+    int s = 0;
+    char dateStr[16] = "";
+    int matched = fscanf(f, "slot=%d\ndate=%15s\n", &s, dateStr);
+    fclose(f);
+    if (matched != 2) {
+        return false;
+    }
+    slot     = s;
+    lastDate = std::string(dateStr);
+    return true;
+}
+
+static bool cbuf_write_state(int slot, const std::string &date)
+{
+    FILE *f = fopen(CBUF_STATE_FILE, "w");
+    if (!f) {
+        return false;
+    }
+    fprintf(f, "slot=%d\ndate=%s\n", slot, date.c_str());
+    fclose(f);
+    return true;
+}
+
+/* ------------------------------------------------------------------ */
+/* ClassFlowImage constructors                                          */
+/* ------------------------------------------------------------------ */
 
 ClassFlowImage::ClassFlowImage(const char* logTag)
 {
@@ -26,6 +66,10 @@ ClassFlowImage::ClassFlowImage(const char* logTag)
 	isLogImage = false;
     disabled = false;
     this->imagesRetention = 5;
+    circularBufferEnabled     = false;
+    circularBufferDays        = 30;
+    circularBufferCurrentSlot = 0;
+    circularBufferLastDate    = "";
 }
 
 ClassFlowImage::ClassFlowImage(std::vector<ClassFlow*> * lfc, const char* logTag) : ClassFlow(lfc)
@@ -34,6 +78,10 @@ ClassFlowImage::ClassFlowImage(std::vector<ClassFlow*> * lfc, const char* logTag
 	isLogImage = false;
     disabled = false;
     this->imagesRetention = 5;
+    circularBufferEnabled     = false;
+    circularBufferDays        = 30;
+    circularBufferCurrentSlot = 0;
+    circularBufferLastDate    = "";
 }
 
 ClassFlowImage::ClassFlowImage(std::vector<ClassFlow*> * lfc, ClassFlow *_prev, const char* logTag) :  ClassFlow(lfc, _prev)
@@ -42,17 +90,87 @@ ClassFlowImage::ClassFlowImage(std::vector<ClassFlow*> * lfc, ClassFlow *_prev, 
 	isLogImage = false;
     disabled = false;
     this->imagesRetention = 5;
+    circularBufferEnabled     = false;
+    circularBufferDays        = 30;
+    circularBufferCurrentSlot = 0;
+    circularBufferLastDate    = "";
 }
 
+/* ------------------------------------------------------------------ */
+/* updateCircularBufferSlot                                             */
+/*                                                                      */
+/* Called at the start of each CreateLogFolder invocation when          */
+/* the circular buffer is active.  When the calendar date has           */
+/* changed since the last write the slot index advances (wrapping at    */
+/* circularBufferDays) and the contents of the old slot folder are      */
+/* deleted so that storage is re-used.                                  */
+/* ------------------------------------------------------------------ */
+void ClassFlowImage::updateCircularBufferSlot(const std::string& currentDate)
+{
+    /* Load persisted state on first call (empty lastDate sentinel) */
+    if (circularBufferLastDate.empty()) {
+        int   savedSlot = 0;
+        std::string savedDate;
+        if (cbuf_read_state(savedSlot, savedDate)) {
+            circularBufferCurrentSlot = savedSlot;
+            circularBufferLastDate    = savedDate;
+            ESP_LOGI(TAG, "Circular buffer state loaded: slot=%d date=%s",
+                     circularBufferCurrentSlot, circularBufferLastDate.c_str());
+        } else {
+            /* No state file yet – start at slot 0 with today's date */
+            circularBufferCurrentSlot = 0;
+            circularBufferLastDate    = currentDate;
+            cbuf_write_state(circularBufferCurrentSlot, circularBufferLastDate);
+            ESP_LOGI(TAG, "Circular buffer state initialised: slot=0 date=%s", currentDate.c_str());
+            return;
+        }
+    }
+
+    if (currentDate == circularBufferLastDate) {
+        return; /* Same day – keep using the current slot */
+    }
+
+    /* Date changed: advance the slot and clear the folder that will be re-used */
+    int nextSlot = (circularBufferCurrentSlot + 1) % circularBufferDays;
+
+    char slotName[16];
+    snprintf(slotName, sizeof(slotName), "cbuf_%02d", nextSlot);
+    std::string oldSlotPath = imagesLocation + "/" + slotName;
+
+    /* Delete the entire old slot folder (best-effort) */
+    removeFolder(oldSlotPath.c_str(), logTag);
+    ESP_LOGD(TAG, "Circular buffer: advanced to slot %d, cleared %s", nextSlot, oldSlotPath.c_str());
+
+    circularBufferCurrentSlot = nextSlot;
+    circularBufferLastDate    = currentDate;
+    cbuf_write_state(circularBufferCurrentSlot, circularBufferLastDate);
+}
+
+/* ------------------------------------------------------------------ */
 
 string ClassFlowImage::CreateLogFolder(string time) {
 	if (!isLogImage)
 		return "";
 
-	string logPath = imagesLocation + "/" + time.LOGFILE_TIME_FORMAT_DATE_EXTR + "/" + time.LOGFILE_TIME_FORMAT_HOUR_EXTR;
+    std::string logPath;
+
+    if (circularBufferEnabled) {
+        /* Circular-buffer mode: use a numbered slot folder            */
+        /* (cbuf_00 … cbuf_NN) and advance when the date changes.      */
+        std::string currentDate = time.LOGFILE_TIME_FORMAT_DATE_EXTR; /* YYYYMMDD */
+        updateCircularBufferSlot(currentDate);
+
+        char slotName[16];
+        snprintf(slotName, sizeof(slotName), "cbuf_%02d", circularBufferCurrentSlot);
+        logPath = imagesLocation + "/" + slotName + "/" + time.LOGFILE_TIME_FORMAT_HOUR_EXTR;
+    } else {
+        /* Default date-based folder structure */
+        logPath = imagesLocation + "/" + time.LOGFILE_TIME_FORMAT_DATE_EXTR + "/" + time.LOGFILE_TIME_FORMAT_HOUR_EXTR;
+    }
+
     isLogImage = mkdir_r(logPath.c_str(), S_IRWXU) == 0;
     if (!isLogImage) {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Can't create log folder for analog images. Path " + logPath);
+        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Can't create log folder for images. Path " + logPath);
     }
 
 	return logPath;
@@ -94,6 +212,11 @@ void ClassFlowImage::RemoveOldLogs()
 {
 	if (!isLogImage)
 		return;
+
+    /* In circular-buffer mode the slot rotation in CreateLogFolder   */
+    /* handles cleanup; date-based deletion is not applicable.        */
+    if (circularBufferEnabled)
+        return;
 	
 	ESP_LOGD(TAG, "remove old images");
     if (imagesRetention == 0) {

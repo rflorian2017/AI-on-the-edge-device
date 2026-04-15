@@ -41,6 +41,7 @@
 #include "Helper.h"
 #include "statusled.h"
 #include "sdcard_check.h"
+#include "nvs_config.h"
 
 #include "../../include/defines.h"
 
@@ -384,6 +385,27 @@ extern "C" void app_main(void)
     // Migrate parameter in config.ini to new naming (firmware 15.0 and newer)
     // ********************************************
     migrateConfiguration();
+
+    // NVS config backup: restore config.ini from NVS if it is missing on SD card,
+    // then (re-)save the current config to NVS so that the backup stays up-to-date.
+    // ********************************************
+    if (!FileExists(CONFIG_FILE)) {
+        LogFile.WriteToFile(ESP_LOG_WARN, TAG, "config.ini not found on SD card, trying to restore from NVS backup...");
+        if (NvsConfigHasBackup()) {
+            if (NvsConfigLoad(CONFIG_FILE)) {
+                LogFile.WriteToFile(ESP_LOG_INFO, TAG, "config.ini successfully restored from NVS backup");
+            } else {
+                LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Failed to restore config.ini from NVS backup");
+            }
+        } else {
+            LogFile.WriteToFile(ESP_LOG_WARN, TAG, "No NVS config backup available");
+        }
+    }
+    if (FileExists(CONFIG_FILE)) {
+        if (!NvsConfigSave(CONFIG_FILE)) {
+            LogFile.WriteToFile(ESP_LOG_WARN, TAG, "Failed to back up config.ini to NVS");
+        }
+    }
 
     // Init time (as early as possible, but SD card needs to be initialized)
     // ********************************************
