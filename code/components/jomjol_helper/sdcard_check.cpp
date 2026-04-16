@@ -9,6 +9,7 @@
 
 #include "esp_rom_crc.h" 
 #include "ClassLogFile.h"
+#include "webui_storage.h"
 
 static const char *TAG = "SDCARD";
 
@@ -73,6 +74,7 @@ bool SDCardCheckFolderFilePresence()
 {
     struct stat sb;
     bool bRetval = true;
+    bool internalWebUiStorage = useInternalWebUiStorage();
 
     LogFile.WriteToFile(ESP_LOG_INFO, TAG, "Folder/file presence check started...");
     /* check if folder exists: config */
@@ -81,10 +83,12 @@ bool SDCardCheckFolderFilePresence()
         bRetval = false;
     }
 
-    /* check if folder exists: html */
-    if (stat("/sdcard/html", &sb) != 0) {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: Folder /html not found");
-        bRetval = false;
+    /* check if folder exists: html (only if Web UI is expected on SD card) */
+    if (!internalWebUiStorage) {
+        if (stat("/sdcard/html", &sb) != 0) {
+            LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: Folder /html not found");
+            bRetval = false;
+        }
     }
 
     /* check if folder exists: firmware */
@@ -123,34 +127,36 @@ bool SDCardCheckFolderFilePresence()
         bRetval = false;
     }
 
-    /* check if file exists: index.html */
-    if ((stat("/sdcard/html/index.html", &sb) != 0) && (stat("/sdcard/html/index.html.gz", &sb) != 0)) {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/index.html not found");
-        bRetval = false;
-    }
+    if (!internalWebUiStorage) {
+        /* check if file exists: index.html */
+        if ((stat("/sdcard/html/index.html", &sb) != 0) && (stat("/sdcard/html/index.html.gz", &sb) != 0)) {
+            LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/index.html not found");
+            bRetval = false;
+        }
 
-    /* check if file exists: ota.html */
-    if ((stat("/sdcard/html/ota_page.html", &sb) != 0) && (stat("/sdcard/html/ota_page.html.gz", &sb) != 0)) {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/ota.html not found");
-        bRetval = false;
-    }
+        /* check if file exists: ota.html */
+        if ((stat("/sdcard/html/ota_page.html", &sb) != 0) && (stat("/sdcard/html/ota_page.html.gz", &sb) != 0)) {
+            LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/ota.html not found");
+            bRetval = false;
+        }
 
-    /* check if file exists: log.html */
-    if ((stat("/sdcard/html/log.html", &sb) != 0) && (stat("/sdcard/html/log.html.gz", &sb) != 0)) {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/log.html not found");
-        bRetval = false;
-    }
+        /* check if file exists: log.html */
+        if ((stat("/sdcard/html/log.html", &sb) != 0) && (stat("/sdcard/html/log.html.gz", &sb) != 0)) {
+            LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/log.html not found");
+            bRetval = false;
+        }
 
-    /* check if file exists: common.js */
-    if ((stat("/sdcard/html/common.js", &sb) != 0) && (stat("/sdcard/html/common.js.gz", &sb) != 0)) {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/common.js not found");
-        bRetval = false;
-    }
+        /* check if file exists: common.js */
+        if ((stat("/sdcard/html/common.js", &sb) != 0) && (stat("/sdcard/html/common.js.gz", &sb) != 0)) {
+            LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/common.js not found");
+            bRetval = false;
+        }
 
-    /* check if file exists: version.txt */
-    if (stat("/sdcard/html/version.txt", &sb) != 0) {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/version.txt not found");
-        bRetval = false;
+        /* check if file exists: version.txt */
+        if (stat("/sdcard/html/version.txt", &sb) != 0) {
+            LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Folder/file check: File /html/version.txt not found");
+            bRetval = false;
+        }
     }
 
     if (bRetval) {

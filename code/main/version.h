@@ -14,8 +14,11 @@ extern "C"
 #include <string>
 #include <string.h>
 #include "Helper.h"
+#include "../../include/webui_storage.h"
+#include "webui_embedded.h"
 #include <fstream>
 #include <algorithm>
+#include <sstream>
 
 
 const char* build_time(void)
@@ -54,7 +57,25 @@ std::string getFwVersion(void) {
 
 std::string getHTMLversion(void){
     char buf[100]="?\0";
-    FILE* pFile;
+    FILE* pFile = NULL;
+
+    if (useInternalWebUiStorage()) {
+        const EmbeddedWebUiFile *embeddedFile = findEmbeddedWebUiFile("/html/version.txt");
+        if (embeddedFile == nullptr) {
+            return std::string(buf);
+        }
+
+        std::string value((const char*)embeddedFile->start, embeddedFile->end - embeddedFile->start);
+        std::istringstream stream(value);
+        std::string line;
+        if (std::getline(stream, line)) {
+            line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+            line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+            return line;
+        }
+        return std::string(buf);
+    }
+
     string fn = FormatFileName("/sdcard/html/version.txt");
     pFile = fopen(fn.c_str(), "r");
 
@@ -72,7 +93,25 @@ std::string getHTMLversion(void){
 
 std::string getHTMLcommit(void){
     char buf[100]="?\0";
-    FILE* pFile;
+    FILE* pFile = NULL;
+
+    if (useInternalWebUiStorage()) {
+        const EmbeddedWebUiFile *embeddedFile = findEmbeddedWebUiFile("/html/version.txt");
+        if (embeddedFile == nullptr) {
+            return std::string(buf);
+        }
+
+        std::string value((const char*)embeddedFile->start, embeddedFile->end - embeddedFile->start);
+        std::istringstream stream(value);
+        std::string line;
+        if (std::getline(stream, line) && std::getline(stream, line)) {
+            line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+            line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+            return line;
+        }
+        return std::string(buf);
+    }
+
     string fn = FormatFileName("/sdcard/html/version.txt");
     pFile = fopen(fn.c_str(), "r");
 
