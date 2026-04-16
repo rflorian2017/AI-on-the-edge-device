@@ -64,7 +64,7 @@ static long getDelayUntilNextScheduleTrigger(const std::vector<int> &scheduleMin
     int nowSecond = timeinfo.tm_sec;
     int minDelaySeconds = (24 * 60 * 60);
 
-    for (int i = 0; i < scheduleMinutes.size(); ++i)
+    for (size_t i = 0; i < scheduleMinutes.size(); ++i)
     {
         int deltaMinutes = scheduleMinutes[i] - nowMinuteOfDay;
 

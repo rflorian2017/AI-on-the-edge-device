@@ -602,7 +602,7 @@ bool ClassFlowControll::ReadParameter(FILE* pfile, string& aktparamgraph)
 
             std::vector<std::string> scheduleEntries = ZerlegeZeile(schedule, ";,");
 
-            for (int i = 0; i < scheduleEntries.size(); ++i) {
+            for (size_t i = 0; i < scheduleEntries.size(); ++i) {
                 std::string entry = trim(scheduleEntries[i], " \t");
                 int hour = 0;
                 int minute = 0;
