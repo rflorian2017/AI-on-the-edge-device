@@ -12,6 +12,9 @@ extern "C" {
 }
 #endif
 
+#include <nvs.h>
+#include <nvs_flash.h>
+
 #include "time_sntp.h"
 #include "ClassLogFile.h"
 #include "CImageBasis.h"
@@ -23,37 +26,116 @@ static const char* TAG = "FLOWIMAGE";
 /* Path of the small state file that persists the circular-buffer slot on the SD card */
 static const char* CBUF_STATE_FILE = "/sdcard/img_tmp/cbuf_state.ini";
 
+/* NVS namespace and key used to back up the circular-buffer state */
+static const char* CBUF_NVS_NS  = "ai_edge";
+static const char* CBUF_NVS_KEY = "cbuf_state";
+
 /* ------------------------------------------------------------------ */
 /* Circular-buffer state helpers                                        */
 /* ------------------------------------------------------------------ */
 
-static bool cbuf_read_state(int &slot, std::string &lastDate)
+/* Write slot/date to NVS (best-effort; errors are logged but not fatal) */
+static void cbuf_nvs_write(int slot, const std::string &date)
 {
-    FILE *f = fopen(CBUF_STATE_FILE, "r");
-    if (!f) {
+    /* Format: "slot=N\ndate=YYYYMMDD\n" */
+    char buf[32];
+    int len = snprintf(buf, sizeof(buf), "slot=%d\ndate=%s\n", slot, date.c_str());
+    if (len <= 0 || len >= (int)sizeof(buf)) {
+        ESP_LOGW(TAG, "cbuf_nvs_write: format error");
+        return;
+    }
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(CBUF_NVS_NS, NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "cbuf_nvs_write: nvs_open failed 0x%x", (unsigned)err);
+        return;
+    }
+    err = nvs_set_blob(handle, CBUF_NVS_KEY, buf, (size_t)len);
+    if (err == ESP_OK) {
+        err = nvs_commit(handle);
+    }
+    nvs_close(handle);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "cbuf_nvs_write: write/commit failed 0x%x", (unsigned)err);
+    } else {
+        ESP_LOGD(TAG, "Circular buffer state saved to NVS: slot=%d date=%s", slot, date.c_str());
+    }
+}
+
+/* Try to read slot/date from NVS; returns true on success */
+static bool cbuf_nvs_read(int &slot, std::string &lastDate)
+{
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(CBUF_NVS_NS, NVS_READONLY, &handle);
+    if (err != ESP_OK) {
         return false;
     }
+
+    size_t required = 0;
+    err = nvs_get_blob(handle, CBUF_NVS_KEY, NULL, &required);
+    if (err != ESP_OK || required == 0 || required >= 32) {
+        nvs_close(handle);
+        return false;
+    }
+
+    char buf[32] = {};
+    err = nvs_get_blob(handle, CBUF_NVS_KEY, buf, &required);
+    nvs_close(handle);
+    if (err != ESP_OK) {
+        return false;
+    }
+
     int s = 0;
     char dateStr[16] = "";
-    int matched = fscanf(f, "slot=%d\ndate=%15s\n", &s, dateStr);
-    fclose(f);
+    int matched = sscanf(buf, "slot=%d\ndate=%15s\n", &s, dateStr);
     if (matched != 2) {
         return false;
     }
+
     slot     = s;
     lastDate = std::string(dateStr);
+    ESP_LOGI(TAG, "Circular buffer state loaded from NVS: slot=%d date=%s", slot, dateStr);
     return true;
+}
+
+static bool cbuf_read_state(int &slot, std::string &lastDate)
+{
+    /* Try SD card first */
+    FILE *f = fopen(CBUF_STATE_FILE, "r");
+    if (f) {
+        int s = 0;
+        char dateStr[16] = "";
+        int matched = fscanf(f, "slot=%d\ndate=%15s\n", &s, dateStr);
+        fclose(f);
+        if (matched == 2) {
+            slot     = s;
+            lastDate = std::string(dateStr);
+            return true;
+        }
+    }
+
+    /* SD card state file missing or corrupt – fall back to NVS */
+    ESP_LOGW(TAG, "cbuf state file not found on SD card, trying NVS fallback");
+    return cbuf_nvs_read(slot, lastDate);
 }
 
 static bool cbuf_write_state(int slot, const std::string &date)
 {
+    bool sdOk = false;
     FILE *f = fopen(CBUF_STATE_FILE, "w");
-    if (!f) {
-        return false;
+    if (f) {
+        fprintf(f, "slot=%d\ndate=%s\n", slot, date.c_str());
+        fclose(f);
+        sdOk = true;
+    } else {
+        ESP_LOGW(TAG, "cbuf_write_state: cannot write to SD card, NVS only");
     }
-    fprintf(f, "slot=%d\ndate=%s\n", slot, date.c_str());
-    fclose(f);
-    return true;
+
+    /* Always mirror to NVS so the state survives SD card replacement */
+    cbuf_nvs_write(slot, date);
+
+    return sdOk;
 }
 
 /* ------------------------------------------------------------------ */
