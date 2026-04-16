@@ -13,35 +13,31 @@ extern "C"
 
 #include <string>
 #include <string.h>
+#include <stdio.h>
 #include "Helper.h"
 #include "../../include/webui_storage.h"
-#include "webui_embedded.h"
-#include <fstream>
 #include <algorithm>
-#include <sstream>
 
-static const std::string HTML_VERSION_PATH = "/html/version.txt";
-
-std::string getEmbeddedWebUiFileLine(const std::string &uriPath, int lineIndex)
+std::string getWebUiFileLine(const std::string &path, int lineIndex)
 {
-    const EmbeddedWebUiFile *embeddedFile = findEmbeddedWebUiFile(uriPath);
-    if (embeddedFile == nullptr) {
-        return "?";
+    char buf[100] = "?\0";
+    FILE *pFile = fopen(path.c_str(), "r");
+    if (pFile == NULL) {
+        return std::string(buf);
     }
-
-    std::string value((const char*)embeddedFile->start, embeddedFile->end - embeddedFile->start);
-    std::istringstream stream(value);
-    std::string line;
 
     for (int i = 0; i <= lineIndex; ++i) {
-        if (!std::getline(stream, line)) {
-            return "?";
+        if (fgets(buf, sizeof(buf), pFile) == NULL) {
+            fclose(pFile);
+            return std::string("?");
         }
     }
+    fclose(pFile);
 
-    line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
-    line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-    return line;
+    std::string value = std::string(buf);
+    value.erase(std::remove(value.begin(), value.end(), '\n'), value.end());
+    value.erase(std::remove(value.begin(), value.end(), '\r'), value.end());
+    return value;
 }
 
 
@@ -80,50 +76,11 @@ std::string getFwVersion(void) {
 }
 
 std::string getHTMLversion(void){
-    char buf[100]="?\0";
-    FILE* pFile = NULL;
-
-    if (useInternalWebUiStorage()) {
-        return getEmbeddedWebUiFileLine(HTML_VERSION_PATH, 0);
-    }
-
-    string fn = FormatFileName("/sdcard/html/version.txt");
-    pFile = fopen(fn.c_str(), "r");
-
-    if (pFile == NULL)
-        return std::string(buf);
-
-    fgets(buf, sizeof(buf), pFile); // Line 1: Version
-    fclose(pFile);
-
-    string value = string(buf);
-    value.erase(std::remove(value.begin(), value.end(), '\n'), value.end()); // Remove any newlines
-
-    return value;
+    return getWebUiFileLine(FormatFileName(getWebUiFilePath("/version.txt")), 0);
 }
 
 std::string getHTMLcommit(void){
-    char buf[100]="?\0";
-    FILE* pFile = NULL;
-
-    if (useInternalWebUiStorage()) {
-        return getEmbeddedWebUiFileLine(HTML_VERSION_PATH, 1);
-    }
-
-    string fn = FormatFileName("/sdcard/html/version.txt");
-    pFile = fopen(fn.c_str(), "r");
-
-    if (pFile == NULL)
-        return std::string(buf);
-
-    fgets(buf, sizeof(buf), pFile); // Line 1: Version -> ignored
-    fgets(buf, sizeof(buf), pFile); // Line 2: Commit
-    fclose(pFile);
-
-    string value = string(buf);
-    value.erase(std::remove(value.begin(), value.end(), '\n'), value.end()); // Remove any newlines
-
-    return value;
+    return getWebUiFileLine(FormatFileName(getWebUiFilePath("/version.txt")), 1);
 }
 
 #endif // _VERSION_H
