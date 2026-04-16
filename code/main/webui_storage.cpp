@@ -78,7 +78,7 @@ static bool mountInternalWebUiStorage()
 
     esp_err_t ret = esp_vfs_littlefs_register(&conf);
     if (ret != ESP_OK) {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Failed to mount LittleFS partition 'webui' (" + esp_err_to_name(ret) + ")");
+        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, std::string("Failed to mount LittleFS partition 'webui' (") + esp_err_to_name(ret) + ")");
         return false;
     }
 
@@ -88,7 +88,7 @@ static bool mountInternalWebUiStorage()
         LogFile.WriteToFile(ESP_LOG_INFO, TAG, "Mounted LittleFS partition 'webui': " + std::to_string(used) + "/" + std::to_string(total) + " bytes used");
     }
     else {
-        LogFile.WriteToFile(ESP_LOG_WARN, TAG, "Mounted LittleFS partition 'webui', but could not read partition info (" + esp_err_to_name(ret) + ")");
+        LogFile.WriteToFile(ESP_LOG_WARN, TAG, std::string("Mounted LittleFS partition 'webui', but could not read partition info (") + esp_err_to_name(ret) + ")");
     }
 
     return true;

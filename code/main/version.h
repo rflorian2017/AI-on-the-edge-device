@@ -20,10 +20,10 @@ extern "C"
 
 std::string getWebUiFileLine(const std::string &path, int lineIndex)
 {
-    char buf[100] = "?\0";
+    char buf[100] = {0};
     FILE *pFile = fopen(path.c_str(), "r");
     if (pFile == NULL) {
-        return std::string(buf);
+        return "?";
     }
 
     for (int i = 0; i <= lineIndex; ++i) {

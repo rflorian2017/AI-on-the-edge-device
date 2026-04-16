@@ -19,6 +19,7 @@ extern "C" {
 #include "Helper.h"
 #include "esp_http_server.h"
 #include "../../include/defines.h"
+#include "../../include/webui_storage.h"
 
 static const char *TAG = "SERVER HELP";
 
@@ -74,7 +75,7 @@ esp_err_t send_file(httpd_req_t *req, std::string filename)
         endsWith(filename, ".gif") ||
         // endsWith(filename, ".zip") ||
         endsWith(filename, ".gz"))	{
-        if (endsWith(filename, "/setup.html")) {
+        if (filename == getWebUiFilePath("/setup.html")) {
             httpd_resp_set_hdr(req, "Clear-Site-Data", "\"*\"");
             set_content_type_from_file(req, filename.c_str());
         }
