@@ -11,3 +11,4 @@ If the flow gets started by a MQTT message or the REST API call, the interval au
 
 !!! Note
     If you want the flow to be disabled, set an interval which is high enough (eg. 1440 = 24h).
+    If `Schedule` is configured, schedule-based triggers are used first and this interval is only used as fallback until time is available.

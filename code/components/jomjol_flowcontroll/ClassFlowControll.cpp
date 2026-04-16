@@ -28,6 +28,7 @@ extern "C" {
 #include "MainFlowControl.h"
 #include "basic_auth.h"
 #include "../../include/defines.h"
+#include <algorithm>
 
 static const char* TAG = "FLOWCTRL";
 
@@ -209,6 +210,7 @@ void ClassFlowControll::SetInitialParameter(void)
     AutoStart = true;
     SetupModeActive = false;
     AutoInterval = 10; // Minutes
+    AutoStartScheduleMinutes.clear();
     flowdigit = NULL;
     flowanalog = NULL;
     flowpostprocessing = NULL;
@@ -228,6 +230,16 @@ bool ClassFlowControll::getIsAutoStart(void)
 void ClassFlowControll::setAutoStartInterval(long &_interval)
 {
     _interval = AutoInterval * 60 * 1000; // AutoInterval: minutes -> ms
+}
+
+bool ClassFlowControll::isAutoStartScheduleEnabled()
+{
+    return !AutoStartScheduleMinutes.empty();
+}
+
+const std::vector<int>& ClassFlowControll::getAutoStartScheduleMinutes()
+{
+    return AutoStartScheduleMinutes;
 }
 
 ClassFlow* ClassFlowControll::CreateClassFlow(std::string _type)
@@ -573,6 +585,41 @@ bool ClassFlowControll::ReadParameter(FILE* pfile, string& aktparamgraph)
             if (isStringNumeric(splitted[1])) {
                 AutoInterval = std::stof(splitted[1]);
             }
+        }
+
+        if (toUpper(splitted[0]) == "SCHEDULE") {
+            AutoStartScheduleMinutes.clear();
+            size_t posEqual = aktparamgraph.find("=");
+            std::string schedule = "";
+
+            if (posEqual != std::string::npos) {
+                schedule = trim(aktparamgraph.substr(posEqual + 1));
+            }
+
+            if (schedule.empty()) {
+                continue;
+            }
+
+            std::vector<std::string> scheduleEntries = ZerlegeZeile(schedule, ";,");
+
+            for (int i = 0; i < scheduleEntries.size(); ++i) {
+                std::string entry = trim(scheduleEntries[i], " \t");
+                int hour = 0;
+                int minute = 0;
+
+                if ((sscanf(entry.c_str(), "%d:%d", &hour, &minute) == 2) &&
+                    (hour >= 0) && (hour <= 23) &&
+                    (minute >= 0) && (minute <= 59)) {
+                    AutoStartScheduleMinutes.push_back((hour * 60) + minute);
+                }
+                else {
+                    LogFile.WriteToFile(ESP_LOG_WARN, TAG, "Ignoring invalid AutoTimer schedule entry: " + entry);
+                }
+            }
+
+            std::sort(AutoStartScheduleMinutes.begin(), AutoStartScheduleMinutes.end());
+            AutoStartScheduleMinutes.erase(std::unique(AutoStartScheduleMinutes.begin(), AutoStartScheduleMinutes.end()),
+                                           AutoStartScheduleMinutes.end());
         }
 
         if ((toUpper(splitted[0]) == "DATALOGACTIVE") && (splitted.size() > 1)) {

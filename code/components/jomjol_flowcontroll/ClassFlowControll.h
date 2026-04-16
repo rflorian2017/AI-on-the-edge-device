@@ -4,6 +4,7 @@
 #define CLASSFLOWCONTROLL_H
 
 #include <string>
+#include <vector>
 
 #include "ClassFlow.h"
 #include "ClassFlowTakeImage.h"
@@ -37,6 +38,7 @@ protected:
 
 	bool AutoStart;
 	float AutoInterval;
+	std::vector<int> AutoStartScheduleMinutes;
 	void SetInitialParameter(void);	
 	std::string aktstatusWithTime;
 	std::string aktstatus;
@@ -72,6 +74,8 @@ public:
 
 	bool getIsAutoStart();
 	void setAutoStartInterval(long &_interval);
+	bool isAutoStartScheduleEnabled();
+	const std::vector<int>& getAutoStartScheduleMinutes();
 
 	std::string* getActStatusWithTime();
 	std::string* getActStatus();
@@ -93,6 +97,5 @@ public:
 };
 
 #endif
-
 
 
