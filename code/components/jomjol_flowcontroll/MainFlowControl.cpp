@@ -54,6 +54,8 @@ static const char *TAG = "MAINCTRL";
 
 static long getDelayUntilNextScheduleTrigger(const std::vector<int> &scheduleMinutes)
 {
+    const int MINUTES_PER_DAY = 24 * 60;
+    const int SECONDS_PER_DAY = 24 * 60 * 60;
     time_t now;
     struct tm timeinfo;
 
@@ -62,7 +64,7 @@ static long getDelayUntilNextScheduleTrigger(const std::vector<int> &scheduleMin
 
     int nowMinuteOfDay = (timeinfo.tm_hour * 60) + timeinfo.tm_min;
     int nowSecond = timeinfo.tm_sec;
-    int minDelaySeconds = (24 * 60 * 60);
+    int minDelaySeconds = SECONDS_PER_DAY;
 
     for (size_t i = 0; i < scheduleMinutes.size(); ++i)
     {
@@ -70,14 +72,14 @@ static long getDelayUntilNextScheduleTrigger(const std::vector<int> &scheduleMin
 
         if ((deltaMinutes < 0) || ((deltaMinutes == 0) && (nowSecond > 0)))
         {
-            deltaMinutes += (24 * 60);
+            deltaMinutes += MINUTES_PER_DAY;
         }
 
         int deltaSeconds = (deltaMinutes * 60) - nowSecond;
 
         if (deltaSeconds < 0)
         {
-            deltaSeconds += (24 * 60 * 60);
+            deltaSeconds += SECONDS_PER_DAY;
         }
 
         if (deltaSeconds < minDelaySeconds)
