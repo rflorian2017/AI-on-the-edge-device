@@ -2000,6 +2000,16 @@
             </td>
             <td>$TOOLTIP_AutoTimer_Interval</td>
         </tr>
+        <tr>
+            <td class="indent1">
+                <class id="AutoTimer_Schedule_text" style="color:black;">Wakeup Schedule</class>
+            </td>
+            <td>
+                <input type="text" id="AutoTimer_Schedule_value1" size="30" pattern="[0-9:;, ]*"
+                    title="Format: HH:MM;HH:MM (e.g. 10:00 or 00:00;05:00;10:00;15:00;20:00)">
+            </td>
+            <td>$TOOLTIP_AutoTimer_Schedule</td>
+        </tr>
 
         <!------------- Data Logging ------------------>
         <tr style="border-bottom: 2px solid lightgray;">
@@ -2431,6 +2441,7 @@ function UpdateInput() {
 
     //WriteParameter(param, category, "AutoTimer", "AutoStart", false);	
     WriteParameter(param, category, "AutoTimer", "Interval", false);
+    WriteParameter(param, category, "AutoTimer", "Schedule", false);
 
     WriteParameter(param, category, "DataLogging", "DataLogActive", false);	
     WriteParameter(param, category, "DataLogging", "DataFilesRetention", false);	
@@ -2609,6 +2620,7 @@ function ReadParameterAll() {
 
     //ReadParameter(param, "AutoTimer", "AutoStart", false);
     ReadParameter(param, "AutoTimer", "Interval", false);
+    ReadParameter(param, "AutoTimer", "Schedule", false);
     
     ReadParameter(param, "DataLogging", "DataLogActive", false);
     ReadParameter(param, "DataLogging", "DataFilesRetention", false);

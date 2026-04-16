@@ -52,6 +52,45 @@ static const char *TAG = "MAINCTRL";
 
 // #define DEBUG_DETAIL_ON
 
+static long getDelayUntilNextScheduleTrigger(const std::vector<int> &scheduleMinutes)
+{
+    const int MINUTES_PER_DAY = 24 * 60;
+    const int SECONDS_PER_DAY = 24 * 60 * 60;
+    time_t now;
+    struct tm timeinfo;
+
+    time(&now);
+    localtime_r(&now, &timeinfo);
+
+    int nowMinuteOfDay = (timeinfo.tm_hour * 60) + timeinfo.tm_min;
+    int nowSecond = timeinfo.tm_sec;
+    int minDelaySeconds = SECONDS_PER_DAY;
+
+    for (size_t i = 0; i < scheduleMinutes.size(); ++i)
+    {
+        int deltaMinutes = scheduleMinutes[i] - nowMinuteOfDay;
+
+        if ((deltaMinutes < 0) || ((deltaMinutes == 0) && (nowSecond > 0)))
+        {
+            deltaMinutes += MINUTES_PER_DAY;
+        }
+
+        int deltaSeconds = (deltaMinutes * 60) - nowSecond;
+
+        if (deltaSeconds < 0)
+        {
+            deltaSeconds += SECONDS_PER_DAY;
+        }
+
+        if (deltaSeconds < minDelaySeconds)
+        {
+            minDelaySeconds = deltaSeconds;
+        }
+    }
+
+    return (long)minDelaySeconds * 1000;
+}
+
 void CheckIsPlannedReboot(void)
 {
     FILE *pfile;
@@ -1643,6 +1682,7 @@ esp_err_t handler_prevalue(httpd_req_t *req)
 void task_autodoFlow(void *pvParameter)
 {
     int64_t fr_start, fr_delta_ms;
+    bool scheduleTimeWarningPrinted = false;
 
     bTaskAutoFlowCreated = true;
 
@@ -1681,6 +1721,29 @@ void task_autodoFlow(void *pvParameter)
 
     while (autostartIsEnabled)
     {
+        if (flowctrl.isAutoStartScheduleEnabled())
+        {
+            if (!getTimeIsSet())
+            {
+                if (!scheduleTimeWarningPrinted)
+                {
+                    LogFile.WriteToFile(ESP_LOG_WARN, TAG, "AutoTimer schedule is configured, but time is not yet set. Falling back to interval timing.");
+                    scheduleTimeWarningPrinted = true;
+                }
+            }
+            else
+            {
+                scheduleTimeWarningPrinted = false;
+                long scheduleDelayMs = getDelayUntilNextScheduleTrigger(flowctrl.getAutoStartScheduleMinutes());
+
+                if (scheduleDelayMs > 0)
+                {
+                    LogFile.WriteToFile(ESP_LOG_DEBUG, TAG, "AutoTimer schedule waiting for next trigger in " + std::to_string(scheduleDelayMs / 1000) + "s");
+                    vTaskDelay(scheduleDelayMs / portTICK_PERIOD_MS);
+                }
+            }
+        }
+
         LogFile.WriteToFile(ESP_LOG_DEBUG, TAG, "----------------------------------------------------------------"); // Clear separation between runs
         time_t roundStartTime = getUpTime();
 
@@ -1737,7 +1800,7 @@ void task_autodoFlow(void *pvParameter)
 
         fr_delta_ms = (esp_timer_get_time() - fr_start) / 1000;
 
-        if (auto_interval > fr_delta_ms)
+        if (!flowctrl.isAutoStartScheduleEnabled() && (auto_interval > fr_delta_ms))
         {
             const TickType_t xDelay = (auto_interval - fr_delta_ms) / portTICK_PERIOD_MS;
             ESP_LOGD(TAG, "Autoflow: sleep for: %ldms", (long)xDelay);

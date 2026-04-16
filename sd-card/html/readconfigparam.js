@@ -267,7 +267,8 @@ function ParseConfig() {
     category[catname]["found"] = false;
     param[catname] = new Object();
     //ParamAddValue(param, catname, "AutoStart");
-    ParamAddValue(param, catname, "Interval");     
+    ParamAddValue(param, catname, "Interval");
+    ParamAddValue(param, catname, "Schedule", 1, false, "", [/^[0-9:;, ]*$/]);
 
     var catname = "DataLogging";
     category[catname] = new Object();
