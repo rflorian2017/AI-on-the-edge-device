@@ -37,7 +37,13 @@ static const char* CBUF_NVS_KEY = "cbuf_state";
 /* Write slot/date to NVS (best-effort; errors are logged but not fatal) */
 static void cbuf_nvs_write(int slot, const std::string &date)
 {
-    /* Format: "slot=N\ndate=YYYYMMDD\n" */
+    /* Validate date format (YYYYMMDD = 8 chars) before formatting */
+    if (date.length() != 8) {
+        ESP_LOGW(TAG, "cbuf_nvs_write: unexpected date length %zu", date.length());
+        return;
+    }
+
+    /* Format: "slot=N\ndate=YYYYMMDD\n" – fits comfortably in 32 bytes */
     char buf[32];
     int len = snprintf(buf, sizeof(buf), "slot=%d\ndate=%s\n", slot, date.c_str());
     if (len <= 0 || len >= (int)sizeof(buf)) {
@@ -74,7 +80,7 @@ static bool cbuf_nvs_read(int &slot, std::string &lastDate)
 
     size_t required = 0;
     err = nvs_get_blob(handle, CBUF_NVS_KEY, NULL, &required);
-    if (err != ESP_OK || required == 0 || required >= 32) {
+    if (err != ESP_OK || required == 0 || required > 32) {
         nvs_close(handle);
         return false;
     }
@@ -88,7 +94,7 @@ static bool cbuf_nvs_read(int &slot, std::string &lastDate)
 
     int s = 0;
     char dateStr[16] = "";
-    int matched = sscanf(buf, "slot=%d\ndate=%15s\n", &s, dateStr);
+    int matched = sscanf(buf, "slot=%d\ndate=%8s\n", &s, dateStr);
     if (matched != 2) {
         return false;
     }
