@@ -54,7 +54,7 @@ esp_err_t send_file(httpd_req_t *req, std::string filename)
     if (!fd)  {
         const EmbeddedWebUiFile *embeddedFile = findEmbeddedWebUiFile(filename);
         if (embeddedFile != nullptr) {
-            if ((filename == "/sdcard/html/setup.html") || (filename == "/html/setup.html")) {
+            if (endsWith(filename, "/setup.html")) {
                 httpd_resp_set_hdr(req, "Clear-Site-Data", "\"*\"");
             }
             else {

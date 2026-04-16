@@ -9,10 +9,10 @@ file(WRITE "${WEBUI_INDEX_CPP}" "#include \"webui_embedded.h\"\n\n")
 set(WEBUI_INDEX 0)
 foreach(WEBUI_FILE ${WEBUI_EMBED_FILES})
     get_filename_component(WEBUI_FILENAME "${WEBUI_FILE}" NAME)
-    string(REGEX REPLACE "[^A-Za-z0-9]" "_" WEBUI_SYMBOL_BASE "${WEBUI_FILE}")
+    string(REGEX REPLACE "[^A-Za-z0-9]" "_" WEBUI_SYMBOL_PATH "${WEBUI_FILE}")
 
-    file(APPEND "${WEBUI_INDEX_CPP}" "extern const unsigned char webui_data_${WEBUI_INDEX}_start[] asm(\"_binary_${WEBUI_SYMBOL_BASE}_start\");\n")
-    file(APPEND "${WEBUI_INDEX_CPP}" "extern const unsigned char webui_data_${WEBUI_INDEX}_end[] asm(\"_binary_${WEBUI_SYMBOL_BASE}_end\");\n")
+    file(APPEND "${WEBUI_INDEX_CPP}" "extern const unsigned char webui_data_${WEBUI_INDEX}_start[] asm(\"_binary_${WEBUI_SYMBOL_PATH}_start\");\n")
+    file(APPEND "${WEBUI_INDEX_CPP}" "extern const unsigned char webui_data_${WEBUI_INDEX}_end[] asm(\"_binary_${WEBUI_SYMBOL_PATH}_end\");\n")
 
     math(EXPR WEBUI_INDEX "${WEBUI_INDEX} + 1")
 endforeach()
@@ -44,4 +44,3 @@ idf_component_register(SRCS ${app_sources}
                     INCLUDE_DIRS "." "../../include" "miniz"
                     REQUIRES vfs esp_http_server app_update esp_http_client nvs_flash jomjol_tfliteclass jomjol_flowcontroll spiffs jomjol_helper jomjol_controlGPIO
                     EMBED_FILES ${WEBUI_EMBED_FILES})
-

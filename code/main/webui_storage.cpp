@@ -40,11 +40,11 @@ bool loadWebUiStorageFromConfig()
                 value = toUpper(trim(splitted[1]));
             }
 
-            if ((value == "INTERNAL") || (value == "INTERNALFLASH") || (value == "FLASH") || (value == "TRUE")) {
+            if (value == "INTERNAL") {
                 return true;
             }
 
-            if ((value == "SDCARD") || (value == "SD") || (value == "FALSE") || (value == "")) {
+            if (value == "SDCARD") {
                 return false;
             }
 
