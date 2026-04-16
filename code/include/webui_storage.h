@@ -6,6 +6,7 @@
 #include <string>
 
 bool loadWebUiStorageFromConfig();
+bool initWebUiStorage();
 void setUseInternalWebUiStorage(bool enabled);
 bool useInternalWebUiStorage();
 std::string getWebUiFilePath(const std::string &uriPath);

@@ -418,7 +418,7 @@ extern "C" void app_main(void)
 
     // Select Web UI storage location
     // ********************************************
-    setUseInternalWebUiStorage(loadWebUiStorageFromConfig());
+    initWebUiStorage();
     LogFile.WriteToFile(ESP_LOG_INFO, TAG, std::string("Web UI storage: ") + (useInternalWebUiStorage() ? "internal flash" : "SD card"));
 
     // Start SoftAP for initial remote setup

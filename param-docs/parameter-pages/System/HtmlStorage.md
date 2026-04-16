@@ -8,4 +8,4 @@ Possible values:
 - `SDCard` (default)
 - `Internal`
 
-Set to `Internal` to use the Web UI files embedded in firmware (internal flash) instead of `/sdcard/html`.
+Set to `Internal` to use the Web UI files from the internal `webui` LittleFS partition (mounted at `/html`) instead of `/sdcard/html`.
