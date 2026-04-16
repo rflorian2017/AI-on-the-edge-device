@@ -19,6 +19,7 @@
 #include "esp_log.h"
 #include "basic_auth.h"
 #include "esp_chip_info.h"
+#include "../../include/webui_storage.h"
 
 #include <stdio.h>
 
@@ -234,20 +235,18 @@ esp_err_t hello_main_handler(httpd_req_t *req)
 
     if ((strcmp(req->uri, "/") == 0))
     {
-        {
-            filetosend = filetosend + "/html/index.html";
-        }
+        filetosend = getWebUiFilePath("/index.html");
     }
     else
     {
-        filetosend = filetosend + "/html" + std::string(req->uri);
+        filetosend = getWebUiFilePath(std::string(req->uri));
         _pos = filetosend.find("?");
         if (_pos > -1){
             filetosend = filetosend.substr(0, _pos);
         }
     }
 
-    if (filetosend == "/sdcard/html/index.html") {
+    if (filetosend == getWebUiFilePath("/index.html")) {
         if (isSetSystemStatusFlag(SYSTEM_STATUS_PSRAM_BAD) || // Initialization failed with crritical errors!
             isSetSystemStatusFlag(SYSTEM_STATUS_CAM_BAD) ||
             isSetSystemStatusFlag(SYSTEM_STATUS_SDCARD_CHECK_BAD) ||
@@ -275,7 +274,7 @@ esp_err_t hello_main_handler(httpd_req_t *req)
         }
         else if (isSetupModusActive()) {
             ESP_LOGD(TAG, "System is in setup mode --> index.html --> setup.html");
-            filetosend = "/sdcard/html/setup.html";
+            filetosend = getWebUiFilePath("/setup.html");
         }
     }
 

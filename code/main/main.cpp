@@ -34,6 +34,7 @@
 #include "server_main.h"
 #include "server_camera.h"
 #include "basic_auth.h"
+#include "../../include/webui_storage.h"
 
 #ifdef ENABLE_MQTT
     #include "server_mqtt.h"
@@ -414,6 +415,11 @@ extern "C" void app_main(void)
     // Set CPU Frequency
     // ********************************************
     setCpuFrequency();
+
+    // Select Web UI storage location
+    // ********************************************
+    setUseInternalWebUiStorage(loadWebUiStorageFromConfig());
+    LogFile.WriteToFile(ESP_LOG_INFO, TAG, std::string("Web UI storage: ") + (useInternalWebUiStorage() ? "internal flash" : "SD card"));
 
     // Start SoftAP for initial remote setup
     // Note: Start AP if no wlan.ini and/or config.ini available, e.g. SD card empty; function does not exit anymore until reboot

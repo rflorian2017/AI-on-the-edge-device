@@ -19,6 +19,7 @@ extern "C" {
 #include "Helper.h"
 #include "esp_http_server.h"
 #include "../../include/defines.h"
+#include "webui_embedded.h"
 
 static const char *TAG = "SERVER HELP";
 
@@ -51,6 +52,19 @@ esp_err_t send_file(httpd_req_t *req, std::string filename)
 
     FILE *fd = fopen(filename.c_str(), "r");
     if (!fd)  {
+        const EmbeddedWebUiFile *embeddedFile = findEmbeddedWebUiFile(filename);
+        if (embeddedFile != nullptr) {
+            if (endsWith(filename, "/setup.html")) {
+                httpd_resp_set_hdr(req, "Clear-Site-Data", "\"*\"");
+            }
+            else {
+                httpd_resp_set_hdr(req, "Cache-Control", "max-age=43200");
+            }
+            set_content_type_from_file(req, filename.c_str());
+            httpd_resp_send(req, (const char*)embeddedFile->start, embeddedFile->end - embeddedFile->start);
+            return ESP_OK;
+        }
+
         ESP_LOGE(TAG, "Failed to read file: %s", filename.c_str());
 		
         /* Respond with 404 Error */

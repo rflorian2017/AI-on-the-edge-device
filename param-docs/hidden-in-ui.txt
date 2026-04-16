@@ -2,3 +2,4 @@ InitialRotate
 MainTopicMQTT
 AutoAdjustSummertime
 SetupMode
+HtmlStorage
