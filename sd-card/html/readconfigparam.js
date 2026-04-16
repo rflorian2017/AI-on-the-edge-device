@@ -101,6 +101,8 @@ function ParseConfig() {
     param[catname] = new Object();
     ParamAddValue(param, catname, "RawImagesLocation");
     ParamAddValue(param, catname, "RawImagesRetention");
+    ParamAddValue(param, catname, "RawImesCircularBuffer");
+    ParamAddValue(param, catname, "RawImesCircularBufferDays");
     ParamAddValue(param, catname, "WaitBeforeTakingPicture");
     ParamAddValue(param, catname, "CamGainceiling");		// Image gain (GAINCEILING_x2, x4, x8, x16, x32, x64 or x128)
     ParamAddValue(param, catname, "CamQuality");    		// 0 - 63
